@@ -1,0 +1,155 @@
+CREATE DATABASE employee;
+USE employee;
+
+CREATE TABLE DEPT (
+    DEPTNO INT PRIMARY KEY,
+    DNAME VARCHAR(50),
+    DLOC VARCHAR(50)
+);
+
+CREATE TABLE EMP (
+    EMPNO INT PRIMARY KEY,
+    ENAME VARCHAR(50),
+    MGR_NO INT,
+    HIREDATE DATE,
+    SAL DECIMAL(10,2),
+    DEPTNO INT,
+    FOREIGN KEY (DEPTNO) REFERENCES DEPT(DEPTNO)
+);
+
+CREATE TABLE PROJECT (
+    PNO INT PRIMARY KEY,
+    PLOC VARCHAR(50),
+    PNAME VARCHAR(50)
+);
+
+CREATE TABLE ASSIGNED_TO (
+    EMPNO INT,
+    PNO INT,
+    JOB_ROLE VARCHAR(50),
+    PRIMARY KEY (EMPNO, PNO),
+    FOREIGN KEY (EMPNO) REFERENCES EMP(EMPNO),
+    FOREIGN KEY (PNO) REFERENCES PROJECT(PNO)
+);
+
+CREATE TABLE INCENTIVES (
+    EMPNO INT,
+    INCENTIVE_DATE DATE,
+    INCENTIVE_AMOUNT DECIMAL(10,2),
+    FOREIGN KEY (EMPNO) REFERENCES EMP(EMPNO)
+);
+
+INSERT INTO DEPT VALUES
+(10, 'HR', 'Bengaluru'),
+(20, 'Finance', 'Hyderabad'),
+(30, 'IT', 'Mysuru'),
+(40, 'Admin', 'Chennai'),
+(50, 'R&D', 'Bengaluru');
+
+INSERT INTO EMP VALUES
+(101, 'Ravi', NULL, '2020-05-01', 50000, 10),
+(102, 'Sneha', 101, '2019-03-12', 60000, 20),
+(103, 'Anil', 102, '2021-07-20', 45000, 30),
+(104, 'Kiran', 101, '2018-01-15', 70000, 40),
+(105, 'Meena', 102, '2022-09-10', 55000, 50),
+(106, 'Ajay', 103, '2023-06-25', 48000, 10);
+
+INSERT INTO PROJECT VALUES
+(201, 'Bengaluru', 'ERP Upgrade'),
+(202, 'Hyderabad', 'Payroll System'),
+(203, 'Mysuru', 'AI Automation'),
+(204, 'Chennai', 'Infrastructure Setup'),
+(205, 'Bengaluru', 'Website Revamp');
+
+INSERT INTO ASSIGNED_TO VALUES
+(101, 201, 'Manager'),
+(102, 202, 'Analyst'),
+(103, 203, 'Developer'),
+(104, 204, 'Administrator'),
+(105, 205, 'Research Engineer'),
+(106, 201, 'Tester');
+
+INSERT INTO INCENTIVES VALUES
+(101, '2023-01-10', 5000),
+(103, '2023-02-15', 3000),
+(105, '2023-03-20', 4000),
+(106, '2023-04-25', 2500);
+
+
+-- to retrive the emp no who work in Bengaluru, Hyderabad , Mysuru
+SELECT DISTINCT A.EMPNO
+FROM ASSIGNED_TO A
+JOIN PROJECT P ON A.PNO = P.PNO
+WHERE P.PLOC IN ('Bengaluru', 'Hyderabad', 'Mysuru');
+
+
+SELECT EMPNO
+FROM EMP
+WHERE EMPNO NOT IN (SELECT EMPNO FROM INCENTIVES); 
+
+
+SELECT 
+    E.EMPNO,
+    E.ENAME,
+    D.DNAME AS DEPARTMENT,
+    A.JOB_ROLE,
+    D.DLOC AS DEPT_LOCATION,
+    P.PLOC AS PROJECT_LOCATION
+FROM EMP E
+JOIN DEPT D ON E.DEPTNO = D.DEPTNO
+JOIN ASSIGNED_TO A ON E.EMPNO = A.EMPNO
+JOIN PROJECT P ON A.PNO = P.PNO
+WHERE D.DLOC = P.PLOC;
+
+
+
+-- WEEK 6 ADDITIONAL QUERIES ON EMPLOYEE DATABASE --
+
+
+
+
+
+-- ix. Manager(s) with maximum employees
+SELECT ENAME AS MANAGER_NAME 
+FROM EMP 
+WHERE EMPNO = (
+    SELECT MGR_NO 
+    FROM EMP 
+    GROUP BY MGR_NO 
+    ORDER BY COUNT(*) DESC 
+    LIMIT 1
+);
+
+-- x. Managers whose salary > average salary of their employees
+SELECT DISTINCT M.ENAME 
+FROM EMP M 
+WHERE M.EMPNO IN (
+    SELECT E.MGR_NO 
+    FROM EMP E 
+    GROUP BY E.MGR_NO 
+    HAVING M.SAL > AVG(E.SAL)
+);
+
+-- xi. Second top-level manager of each department
+SELECT DEPTNO, ENAME 
+FROM EMP 
+WHERE MGR_NO IN (
+    SELECT EMPNO 
+    FROM EMP 
+    WHERE MGR_NO IS NULL
+)
+ORDER BY DEPTNO
+LIMIT 1 OFFSET 1;
+
+-- xii. Employee details who got second maximum incentive in Jan 2019
+SELECT * 
+FROM INCENTIVES 
+WHERE INCENTIVE_DATE BETWEEN '2019-01-01' AND '2019-01-31' 
+ORDER BY INCENTIVE_AMOUNT DESC 
+LIMIT 1 OFFSET 1;
+
+-- xiii. Employees working in same department as their manager
+SELECT E.* 
+FROM EMP E 
+JOIN EMP M ON E.MGR_NO = M.EMPNO 
+WHERE E.DEPTNO = M.DEPTNO;
